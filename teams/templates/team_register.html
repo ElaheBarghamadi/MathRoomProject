@@ -1,0 +1,326 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت‌نام تیمی مسابقه ریاضی</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Vazir', sans-serif;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+        }
+
+        h2 {
+            text-align: center;
+            color: #00c4cc;
+            text-shadow: 0 0 8px #00ffff;
+            margin-bottom: 20px;
+        }
+
+        #message {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        form label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 0.95rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08);
+            color: #e6edf3;
+            font-size: 0.95rem;
+        }
+
+        input:focus, select:focus {
+            background: rgba(0, 255, 255, 0.15);
+            box-shadow: 0 0 5px #00ffff;
+            outline: none;
+        }
+
+        .member-box {
+            padding: 15px;
+            border: 1px solid #222;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            margin: 5px 2px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #addBtn {
+            background: #1c2b50;
+            color: #fff;
+        }
+
+        #addBtn:hover {
+            background: #2e4b8f;
+            box-shadow: 0 0 10px #2e4b8f;
+        }
+
+        #removeBtn {
+            background: #550000;
+            color: #fff;
+        }
+
+        #removeBtn:hover {
+            background: #aa0000;
+            box-shadow: 0 0 10px #ff3333;
+        }
+
+        #submitBtn {
+            background: linear-gradient(90deg, #00c4cc, #0078ff);
+            color: #fff;
+            width: 100%;
+        }
+
+        #submitBtn:hover {
+            transform: scale(1.02);
+        }
+
+        #submitBtn:disabled {
+            background: #3a3a3a;
+            cursor: not-allowed;
+            color: #777;
+        }
+
+        .note {
+            text-align: center;
+            margin-top: 10px;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            button {
+                width: 48%;
+                margin: 5px 1%;
+            }
+        }
+    </style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="container">
+    <h2>ثبت‌نام تیمی اتاق فرار</h2>
+
+    {% if messages %}
+        <div id="message">
+            {% for message in messages %}
+                <div style="color:{% if message.tags == 'error' %}#ff6363{% else %}#00ffcc{% endif %}; margin-bottom:5px;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div id="message"></div>
+    {% endif %}
+
+    <form id="teamForm" method="POST">
+        {% csrf_token %}
+        <label>نام تیم:</label>{{ form.team_name }}
+        <input type="hidden" name="member_count" id="member_count" value="1">
+
+        <div id="members">
+            <div class="member-box">
+                <label>نام سرگروه:</label><input type="text" name="first_name_0" placeholder="مثلاً فاطمه">
+                <label>نام خانوادگی:</label><input type="text" name="last_name_0" placeholder="مثلاً آزاد">
+                <label>پایه:</label>
+                <select name="grade_0" class="grade-select">
+                    <option value="">انتخاب کنید</option>
+                    <option value="7">هفتم</option>
+                    <option value="8">هشتم</option>
+                    <option value="9">نهم</option>
+                </select>
+                <label>کلاس:</label>
+                <select name="classroom_0" class="class-select">
+                    <option value="">انتخاب کنید</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="text-align:center;">
+            <button type="button" id="addBtn">➕ افزودن عضو</button>
+            <button type="button" id="removeBtn">➖ حذف عضو</button>
+            <button type="submit" id="submitBtn" disabled>ثبت نهایی تیم</button>
+        </div>
+        <div class="note">تیم باید شامل ۳ تا ۵ نفر باشد (با احتساب سرگروه).</div>
+    </form>
+</div>
+
+<script>
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const symbols = ['√', 'π', '∑', '∫', 'Δ', '∞', 'sin', 'tan', 'θ', '≠', '≈', '≤', '≥', '∂', '!', '+', '-', '×', '÷', 'α', 'β', 'γ', '∇'];
+    let items = [];
+    for (let i = 0; i < 120; i++) {
+        items.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 20 + 12,
+            speed: Math.random() * 0.8 + 0.2,
+            char: symbols[Math.floor(Math.random() * symbols.length)]
+        });
+    }
+
+    function animate() {
+        ctx.fillStyle = 'rgba(13,17,23,0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ffcc';
+        items.forEach(item => {
+            ctx.font = `bold ${item.size}px monospace`;
+            ctx.fillText(item.char, item.x, item.y);
+            item.y += item.speed;
+            if (item.y > canvas.height) {
+                item.y = 0;
+                item.x = Math.random() * canvas.width;
+                item.char = symbols[Math.floor(Math.random() * symbols.length)];
+                item.size = Math.random() * 20 + 12;
+            }
+        });
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+
+    let count = 1;
+    const addBtn = document.getElementById('addBtn');
+    const removeBtn = document.getElementById('removeBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const membersDiv = document.getElementById('members');
+    const message = document.getElementById('message');
+    const member_count_input = document.getElementById('member_count');
+
+    const CLASS_MAP = {'7': ['701', '702'], '8': ['801', '802'], '9': ['901', '902']};
+
+    function updateButtons() {
+        submitBtn.disabled = count < 3;
+        addBtn.disabled = count >= 5;
+        removeBtn.disabled = count <= 1;
+        member_count_input.value = count;
+    }
+
+    function updateClassOptions(selectElem) {
+        const grade = selectElem.value;
+        const classSelect = selectElem.closest('.member-box').querySelector('.class-select');
+        classSelect.innerHTML = '<option value="">انتخاب کنید</option>';
+        if (CLASS_MAP[grade]) {
+            CLASS_MAP[grade].forEach(c => {
+                classSelect.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        }
+    }
+
+    membersDiv.addEventListener('change', e => {
+        if (e.target.classList.contains('grade-select')) updateClassOptions(e.target);
+    });
+
+    addBtn.addEventListener('click', () => {
+        if (count >= 5) return;
+        const div = document.createElement('div');
+        div.classList.add('member-box');
+        div.innerHTML = `
+<label>نام:</label><input type="text" name="first_name_${count}" placeholder="مثلاً فاطمه">
+<label>نام خانوادگی:</label><input type="text" name="last_name_${count}" placeholder="مثلاً آزاد">
+<label>پایه:</label>
+<select name="grade_${count}" class="grade-select">
+<option value="">انتخاب کنید</option>
+<option value="7">هفتم</option>
+<option value="8">هشتم</option>
+<option value="9">نهم</option>
+</select>
+<label>کلاس:</label>
+<select name="classroom_${count}" class="class-select"><option value="">انتخاب کنید</option></select>`;
+        membersDiv.appendChild(div);
+        count++;
+        updateButtons();
+        message.textContent = '';
+    });
+
+    removeBtn.addEventListener('click', () => {
+        if (count <= 1) return;
+        membersDiv.removeChild(membersDiv.lastElementChild);
+        count--;
+        updateButtons();
+        message.textContent = '';
+    });
+
+    document.getElementById('teamForm').addEventListener('submit', e => {
+        const teamName = document.getElementById('id_team_name').value.trim();
+        if (!teamName) {
+            message.style.color = '#ff6363';
+            message.textContent = 'نام تیم را وارد کنید.';
+            e.preventDefault();
+            return;
+        }
+        const memberBoxes = membersDiv.querySelectorAll('.member-box');
+        for (let box of memberBoxes) {
+            const fname = box.querySelector('input[name^="first_name"]').value.trim();
+            const lname = box.querySelector('input[name^="last_name"]').value.trim();
+            const grade = box.querySelector('select[name^="grade"]').value;
+            const classroom = box.querySelector('select[name^="classroom"]').value;
+            if (!fname || !lname || !grade || !classroom) {
+                message.style.color = '#ff6363';
+                message.textContent = 'لطفاً همه فیلدهای هر عضو را کامل کنید.';
+                e.preventDefault();
+                return;
+            }
+        }
+    });
+    updateButtons();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت موفقیت‌آمیز تیم</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Vazir', sans-serif;
+            background-color: #0d1117;
+            color: #e6edf3;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 25px;
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+        }
+
+        h2 {
+            text-align: center;
+            color: #00c4cc;
+            text-shadow: 0 0 8px #00ffff;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background-color: rgba(0, 255, 255, 0.1);
+        }
+
+        td {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .note {
+            text-align: center;
+            margin-top: 15px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: linear-gradient(90deg, #00c4cc, #0078ff);
+            color: #fff;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            table, th, td {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="container">
+    <h2>ثبت موفقیت‌آمیز تیم: {{ team.name }}</h2>
+
+    <table>
+        <thead>
+        <tr>
+            <th>نام</th>
+            <th>نام خانوادگی</th>
+            <th>پایه</th>
+            <th>کلاس</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for member in team.members.all %}
+            <tr>
+                <td>{{ member.first_name }}</td>
+                <td>{{ member.last_name }}</td>
+                <td>
+                    {% if member.grade == '7' %}هفتم{% elif member.grade == '8' %}هشتم{% else %}نهم{% endif %}
+                </td>
+                <td>{{ member.classroom }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="note">تیم شما با موفقیت ثبت شد. می‌توانید برای ثبت تیم دیگر بازگردید.</div>
+    <a href="{% url 'register_team' %}">
+        <button>ثبت تیم جدید</button>
+    </a>
+</div>
+
+<script>
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let numbers = [];
+    for (let i = 0; i < 100; i++) {
+        numbers.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 15 + 10,
+            speed: Math.random() * 0.5 + 0.2,
+            char: Math.floor(Math.random() * 10)
+        });
+    }
+
+    function animate() {
+        ctx.fillStyle = 'rgba(13,17,23,0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ffcc';
+        ctx.font = 'bold 18px monospace';
+        numbers.forEach(n => {
+            ctx.fillText(n.char, n.x, n.y);
+            n.y += n.speed;
+            if (n.y > canvas.height) {
+                n.y = 0;
+                n.x = Math.random() * canvas.width;
+                n.char = Math.floor(Math.random() * 10);
+            }
+        });
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+</script>
+</body>
+</html>
